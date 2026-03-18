@@ -32,11 +32,10 @@ export async function POST(request: NextRequest) {
       }
 
       questions = exam.examQuestions.map(eq => ({
-        id: eq.questionId,
         questionNum: eq.questionNum,
         section: eq.section,
-        ...eq.question,
         marks: eq.marks,
+        ...eq.question,
       }));
     } else if (questionId) {
       const question = await db.question.findUnique({
