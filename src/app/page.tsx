@@ -228,6 +228,32 @@ export default function HomePage() {
   // Notifications
   const [notifications, setNotifications] = useState<any[]>([]);
   const [showNotifications, setShowNotifications] = useState(false);
+  
+  // New features state
+  const [shareDialogOpen, setShareDialogOpen] = useState(false);
+  const [shareExamId, setShareExamId] = useState<string | null>(null);
+  const [shareLink, setShareLink] = useState<string | null>(null);
+  const [shareLoading, setShareLoading] = useState(false);
+  
+  const [importDialogOpen, setImportDialogOpen] = useState(false);
+  const [importFile, setImportFile] = useState<File | null>(null);
+  const [importLoading, setImportLoading] = useState(false);
+  const [importSubject, setImportSubject] = useState('');
+  const [importClassLevel, setImportClassLevel] = useState('');
+  
+  const [aiToolOpen, setAiToolOpen] = useState(false);
+  const [currentAiTool, setCurrentAiTool] = useState<string | null>(null);
+  const [aiLoading, setAiLoading] = useState(false);
+  const [aiResult, setAiResult] = useState<any>(null);
+  
+  const [analyticsData, setAnalyticsData] = useState<any>(null);
+  const [topicCoverage, setTopicCoverage] = useState<any[]>([]);
+  
+  const [apiKeys, setApiKeys] = useState<any[]>([]);
+  const [apiKeyDialogOpen, setApiKeyDialogOpen] = useState(false);
+  const [newKeyName, setNewKeyName] = useState('');
+  
+  const [checkoutLoading, setCheckoutLoading] = useState(false);
 
   // Mount effect
   useEffect(() => {
@@ -538,6 +564,183 @@ export default function HomePage() {
       district: <Crown className="h-5 w-5" />,
     };
     return icons[slug] || <Zap className="h-5 w-5" />;
+  };
+
+  // Stripe Checkout
+  const handleStripeCheckout = async (planSlug: string, cycle: 'monthly' | 'yearly') => {
+    setCheckoutLoading(true);
+    try {
+      const res = await fetch('/api/stripe/checkout', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ planSlug, billingCycle: cycle }),
+      });
+      const data = await res.json();
+      if (data.url) {
+        window.location.href = data.url;
+      } else {
+        toast.error('Failed to create checkout session');
+      }
+    } catch (error) {
+      toast.error('Checkout failed');
+    } finally {
+      setCheckoutLoading(false);
+    }
+  };
+
+  // Share Exam
+  const handleShareExam = async (examId: string) => {
+    setShareExamId(examId);
+    setShareLoading(true);
+    setShareDialogOpen(true);
+    try {
+      const res = await fetch('/api/share/exam', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ examId, expiresIn: 168 }), // 7 days
+      });
+      const data = await res.json();
+      if (data.shareUrl) {
+        setShareLink(data.shareUrl);
+        toast.success('Share link created!');
+      } else {
+        toast.error('Failed to create share link');
+      }
+    } catch (error) {
+      toast.error('Failed to share exam');
+    } finally {
+      setShareLoading(false);
+    }
+  };
+
+  const copyShareLink = () => {
+    if (shareLink) {
+      navigator.clipboard.writeText(shareLink);
+      toast.success('Link copied to clipboard!');
+    }
+  };
+
+  // Bulk Import Questions
+  const handleImportQuestions = async () => {
+    if (!importFile || !importSubject || !importClassLevel) {
+      toast.error('Please fill all fields');
+      return;
+    }
+    setImportLoading(true);
+    try {
+      const formData = new FormData();
+      formData.append('file', importFile);
+      formData.append('subjectId', importSubject);
+      formData.append('classLevelId', importClassLevel);
+      
+      const res = await fetch('/api/import/questions', {
+        method: 'POST',
+        body: formData,
+      });
+      const data = await res.json();
+      if (data.success) {
+        toast.success(`Imported ${data.imported} questions!`);
+        setImportDialogOpen(false);
+        setImportFile(null);
+      } else {
+        toast.error(data.error || 'Import failed');
+      }
+    } catch (error) {
+      toast.error('Import failed');
+    } finally {
+      setImportLoading(false);
+    }
+  };
+
+  // AI Tools
+  const handleAiTool = async (tool: string, params: any) => {
+    setCurrentAiTool(tool);
+    setAiLoading(true);
+    setAiToolOpen(true);
+    setAiResult(null);
+    try {
+      const res = await fetch(`/api/ai/${tool}`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(params),
+      });
+      const data = await res.json();
+      if (data.success) {
+        setAiResult(data);
+        toast.success('AI analysis complete!');
+      } else {
+        toast.error(data.error || 'AI tool failed');
+      }
+    } catch (error) {
+      toast.error('AI tool failed');
+    } finally {
+      setAiLoading(false);
+    }
+  };
+
+  // Fetch Analytics
+  const fetchAnalytics = async (period: string = '30') => {
+    try {
+      const res = await fetch(`/api/analytics?period=${period}`);
+      const data = await res.json();
+      setAnalyticsData(data);
+    } catch (error) {
+      console.error('Failed to fetch analytics:', error);
+    }
+  };
+
+  // Fetch Topic Coverage
+  const fetchTopicCoverage = async () => {
+    try {
+      const res = await fetch('/api/topic-coverage');
+      const data = await res.json();
+      setTopicCoverage(data.allTopics || []);
+    } catch (error) {
+      console.error('Failed to fetch topic coverage:', error);
+    }
+  };
+
+  // API Keys
+  const fetchApiKeys = async () => {
+    try {
+      const res = await fetch('/api/api-keys');
+      const data = await res.json();
+      setApiKeys(data.keys || []);
+    } catch (error) {
+      console.error('Failed to fetch API keys:', error);
+    }
+  };
+
+  const createApiKey = async () => {
+    if (!newKeyName) {
+      toast.error('Please enter a name');
+      return;
+    }
+    try {
+      const res = await fetch('/api/api-keys', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ name: newKeyName }),
+      });
+      const data = await res.json();
+      if (data.key) {
+        toast.success('API key created! Copy it now - it won\'t be shown again.');
+        setApiKeys([...apiKeys, data.key]);
+        setNewKeyName('');
+      }
+    } catch (error) {
+      toast.error('Failed to create API key');
+    }
+  };
+
+  const revokeApiKey = async (keyId: string) => {
+    try {
+      await fetch(`/api/api-keys?id=${keyId}`, { method: 'DELETE' });
+      setApiKeys(apiKeys.filter(k => k.id !== keyId));
+      toast.success('API key revoked');
+    } catch (error) {
+      toast.error('Failed to revoke API key');
+    }
   };
 
   // Update topics when subject/class level changes
@@ -1759,7 +1962,14 @@ export default function HomePage() {
                             </div>
                           </CardHeader>
                           <CardContent className="pt-0">
-                            <Button className="w-full bg-gradient-to-r from-slate-700 to-slate-800 hover:from-slate-800 hover:to-slate-900 text-white gap-2">
+                            <Button 
+                              className="w-full bg-gradient-to-r from-slate-700 to-slate-800 hover:from-slate-800 hover:to-slate-900 text-white gap-2"
+                              onClick={() => handleAiTool(tool.endpoint, { 
+                                questionText: 'Sample question for demonstration',
+                                subject: subjects[0]?.name || 'General',
+                                classLevel: classLevels[0]?.name || 'Secondary'
+                              })}
+                            >
                               <Sparkles className="h-4 w-4" /> Launch Tool
                             </Button>
                           </CardContent>
@@ -1767,6 +1977,106 @@ export default function HomePage() {
                       </motion.div>
                     ))}
                   </div>
+                  
+                  {/* AI Result Dialog */}
+                  <Dialog open={aiToolOpen} onOpenChange={setAiToolOpen}>
+                    <DialogContent className="max-w-2xl max-h-[80vh] overflow-y-auto">
+                      <DialogHeader>
+                        <DialogTitle className="flex items-center gap-2">
+                          <Sparkles className="h-5 w-5 text-emerald-500" />
+                          AI Analysis Result
+                        </DialogTitle>
+                        <DialogDescription>
+                          {currentAiTool?.replace(/-/g, ' ').replace(/\b\w/g, l => l.toUpperCase())}
+                        </DialogDescription>
+                      </DialogHeader>
+                      {aiLoading ? (
+                        <div className="flex items-center justify-center py-12">
+                          <Loader2 className="h-8 w-8 animate-spin text-emerald-500" />
+                          <span className="ml-3 text-slate-600 dark:text-slate-400">Processing with AI...</span>
+                        </div>
+                      ) : aiResult ? (
+                        <div className="space-y-4">
+                          {aiResult.answers && (
+                            <div className="space-y-4">
+                              {aiResult.answers.map((ans: any, i: number) => (
+                                <Card key={i} className="bg-slate-50 dark:bg-slate-800">
+                                  <CardHeader className="pb-2">
+                                    <CardTitle className="text-sm">Question {i + 1}</CardTitle>
+                                  </CardHeader>
+                                  <CardContent>
+                                    <p className="text-sm text-slate-700 dark:text-slate-300 whitespace-pre-wrap">{ans.modelAnswer}</p>
+                                    {ans.keyPoints && ans.keyPoints.length > 0 && (
+                                      <div className="mt-2">
+                                        <p className="text-xs font-medium text-slate-500 dark:text-slate-400">Key Points:</p>
+                                        <ul className="text-xs text-slate-600 dark:text-slate-400 list-disc list-inside">
+                                          {ans.keyPoints.map((p: string, j: number) => <li key={j}>{p}</li>)}
+                                        </ul>
+                                      </div>
+                                    )}
+                                  </CardContent>
+                                </Card>
+                              ))}
+                            </div>
+                          )}
+                          {aiResult.predictions && (
+                            <div className="space-y-3">
+                              {aiResult.predictions.map((pred: any, i: number) => (
+                                <div key={i} className="flex items-center justify-between p-3 bg-slate-50 dark:bg-slate-800 rounded-lg">
+                                  <div>
+                                    <p className="text-sm font-medium">Question {i + 1}</p>
+                                    <p className="text-xs text-slate-500">Cognitive: {pred.cognitiveLevel}</p>
+                                  </div>
+                                  <Badge className={pred.difficulty === 'easy' ? 'bg-green-100 text-green-700' : pred.difficulty === 'medium' ? 'bg-yellow-100 text-yellow-700' : 'bg-red-100 text-red-700'}>
+                                    {pred.difficulty}
+                                  </Badge>
+                                </div>
+                              ))}
+                            </div>
+                          )}
+                          {aiResult.suggestions && (
+                            <div className="space-y-3">
+                              {aiResult.suggestions.map((sug: any, i: number) => (
+                                <Card key={i} className="bg-slate-50 dark:bg-slate-800">
+                                  <CardHeader className="pb-2">
+                                    <div className="flex items-center justify-between">
+                                      <Badge>{sug.questionType}</Badge>
+                                      <span className="text-xs text-slate-500">{sug.marks} marks</span>
+                                    </div>
+                                  </CardHeader>
+                                  <CardContent>
+                                    <p className="text-sm">{sug.questionText}</p>
+                                  </CardContent>
+                                </Card>
+                              ))}
+                            </div>
+                          )}
+                          {aiResult.rubrics && (
+                            <div className="space-y-4">
+                              {aiResult.rubrics.map((rubric: any, i: number) => (
+                                <Card key={i} className="bg-slate-50 dark:bg-slate-800">
+                                  <CardHeader className="pb-2">
+                                    <CardTitle className="text-sm">Question {rubric.questionNumber || i + 1}</CardTitle>
+                                    <CardDescription>Total Marks: {rubric.totalMarks}</CardDescription>
+                                  </CardHeader>
+                                  <CardContent>
+                                    {rubric.criteria && rubric.criteria.map((c: any, j: number) => (
+                                      <div key={j} className="mb-2 p-2 bg-white dark:bg-slate-700 rounded">
+                                        <p className="text-sm font-medium">{c.criterion} ({c.maxMarks} marks)</p>
+                                      </div>
+                                    ))}
+                                  </CardContent>
+                                </Card>
+                              ))}
+                            </div>
+                          )}
+                        </div>
+                      ) : null}
+                      <DialogFooter>
+                        <Button variant="outline" onClick={() => setAiToolOpen(false)}>Close</Button>
+                      </DialogFooter>
+                    </DialogContent>
+                  </Dialog>
                   
                   <Card className="border-0 shadow-sm bg-gradient-to-r from-emerald-50 to-teal-50 dark:from-emerald-900/20 dark:to-teal-900/20">
                     <CardContent className="p-6">

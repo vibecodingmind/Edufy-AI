@@ -1,4 +1,4 @@
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
 import { Inter, Playfair_Display } from "next/font/google";
 import "./globals.css";
 import { Toaster } from "@/components/ui/sonner";
@@ -14,6 +14,17 @@ const playfair = Playfair_Display({
   subsets: ["latin"],
 });
 
+export const viewport: Viewport = {
+  width: 'device-width',
+  initialScale: 1,
+  maximumScale: 5,
+  userScalable: true,
+  themeColor: [
+    { media: '(prefers-color-scheme: light)', color: '#ffffff' },
+    { media: '(prefers-color-scheme: dark)', color: '#0f172a' },
+  ],
+};
+
 export const metadata: Metadata = {
   title: {
     default: "EDUC.AI - AI-Powered Exam Generation Platform",
@@ -24,7 +35,9 @@ export const metadata: Metadata = {
   authors: [{ name: "EDUC.AI Team" }],
   icons: {
     icon: "/favicon.ico",
+    apple: "/icons/icon-192x192.png",
   },
+  manifest: "/manifest.json",
   openGraph: {
     title: "EDUC.AI - AI-Powered Exam Generation",
     description: "Generate professional school exams automatically using AI. Trusted by teachers across Africa.",
@@ -35,6 +48,14 @@ export const metadata: Metadata = {
     card: "summary_large_image",
     title: "EDUC.AI - AI-Powered Exam Generation",
     description: "Generate professional school exams automatically using AI.",
+  },
+  appleWebApp: {
+    capable: true,
+    statusBarStyle: 'default',
+    title: 'EDUC.AI',
+  },
+  formatDetection: {
+    telephone: false,
   },
 };
 
