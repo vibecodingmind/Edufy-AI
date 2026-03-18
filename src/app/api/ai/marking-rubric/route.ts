@@ -31,12 +31,18 @@ export async function POST(request: NextRequest) {
         return NextResponse.json({ error: 'Exam not found' }, { status: 404 });
       }
 
-      questions = exam.examQuestions.map(eq => ({
-        questionNum: eq.questionNum,
-        section: eq.section,
-        marks: eq.marks,
-        ...eq.question,
-      }));
+      questions = exam.examQuestions.map(eq => {
+        const q = eq.question;
+        return {
+          id: eq.questionId,
+          questionNum: eq.questionNum,
+          section: eq.section,
+          questionText: q.questionText,
+          questionType: q.questionType,
+          difficulty: q.difficulty,
+          marks: eq.marks,
+        };
+      });
     } else if (questionId) {
       const question = await db.question.findUnique({
         where: { id: questionId },
@@ -82,8 +88,7 @@ Format as JSON:
       "criterion": "description",
       "maxMarks": number,
       "levels": [
-        {"marks": number, "description": "what earns these marks"},
-        ...
+        {"marks": number, "description": "what earns these marks"}
       ]
     }
   ],
