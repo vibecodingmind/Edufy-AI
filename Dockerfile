@@ -14,10 +14,11 @@ FROM base AS deps
 
 WORKDIR /app
 
-# Copy package files
+# Copy package files AND prisma schema (needed for prisma generate during install)
 COPY package.json bun.lock* package-lock.json* yarn.lock* pnpm-lock.yaml* ./
+COPY prisma ./prisma
 
-# Install dependencies with Bun
+# Install dependencies with Bun (this will run prisma generate via postinstall)
 RUN bun install --frozen-lockfile
 
 # ============================================
@@ -31,7 +32,7 @@ WORKDIR /app
 COPY --from=deps /app/node_modules ./node_modules
 COPY . .
 
-# Generate Prisma Client
+# Generate Prisma Client (ensure it's generated)
 RUN bunx prisma generate
 
 # Set environment variables for build
