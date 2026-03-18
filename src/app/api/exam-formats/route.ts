@@ -7,7 +7,7 @@ export async function GET() {
       where: { isActive: true },
       include: {
         sections: {
-          orderBy: { name: 'asc' },
+          orderBy: { sortOrder: 'asc' },
         },
       },
     });
