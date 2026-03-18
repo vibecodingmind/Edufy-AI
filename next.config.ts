@@ -1,12 +1,29 @@
 import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
-  output: "standalone",
-  /* config options here */
-  typescript: {
-    ignoreBuildErrors: true,
+  // Enable for production optimizations
+  reactStrictMode: true,
+  
+  // Experimental features
+  experimental: {
+    optimizePackageImports: ['lucide-react', 'recharts', 'framer-motion'],
   },
-  reactStrictMode: false,
+  
+  // TypeScript configuration
+  typescript: {
+    // Don't ignore build errors in production
+    ignoreBuildErrors: false,
+  },
+  
+  // Image domains
+  images: {
+    remotePatterns: [
+      {
+        protocol: 'https',
+        hostname: '**',
+      },
+    ],
+  },
 };
 
 export default nextConfig;
