@@ -1,0 +1,10 @@
+{
+  "buildCommand": "bun run db:push && bun run build",
+  "devCommand": "bun run dev",
+  "installCommand": "bun install",
+  "framework": "nextjs",
+  "regions": ["iad1", "sfo1", "fra1"],
+  "env": {
+    "BUN_VERSION": "latest"
+  }
+}
