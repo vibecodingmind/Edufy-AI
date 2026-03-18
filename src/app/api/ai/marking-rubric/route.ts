@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { db } from '@/lib/db';
 import { getCurrentUser } from '@/lib/auth-config';
+import ZAI from 'z-ai-web-dev-sdk';
 
 // POST - Generate marking rubric
 export async function POST(request: NextRequest) {
@@ -52,7 +53,7 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'No questions to generate rubric for' }, { status: 400 });
     }
 
-    const { LLM } = await import('z-ai-web-dev-sdk');
+    const zai = await ZAI.create();
 
     const rubrics = [];
 
@@ -91,21 +92,26 @@ Format as JSON:
   "generalGuidance": "overall marking advice"
 }`;
 
-      const response = await LLM.chat({
-        messages: [{ role: 'user', content: prompt }],
-        maxTokens: 1000,
+      const completion = await zai.chat.completions.create({
+        messages: [
+          { role: 'assistant', content: 'You are an expert examiner. Always respond with valid JSON.' },
+          { role: 'user', content: prompt }
+        ],
+        thinking: { type: 'disabled' }
       });
+
+      const responseContent = completion.choices[0]?.message?.content || '';
 
       let rubric;
       try {
-        const jsonMatch = response.choices[0].message.content.match(/\{[\s\S]*\}/);
+        const jsonMatch = responseContent.match(/\{[\s\S]*\}/);
         if (jsonMatch) {
           rubric = JSON.parse(jsonMatch[0]);
         } else {
           rubric = { error: 'Could not parse rubric' };
         }
       } catch {
-        rubric = { error: 'Parse error', raw: response.choices[0].message.content };
+        rubric = { error: 'Parse error', raw: responseContent };
       }
 
       rubrics.push({

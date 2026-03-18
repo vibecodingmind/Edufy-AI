@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { db } from '@/lib/db';
 import { getCurrentUser } from '@/lib/auth-config';
+import ZAI from 'z-ai-web-dev-sdk';
 
 // POST - Predict question difficulty using AI
 export async function POST(request: NextRequest) {
@@ -27,7 +28,7 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'No questions to analyze' }, { status: 400 });
     }
 
-    const { LLM } = await import('z-ai-web-dev-sdk');
+    const zai = await ZAI.create();
     
     const predictions = [];
 
@@ -54,14 +55,19 @@ Provide a difficulty prediction as JSON:
   "suggestedModifications": ["suggestions to adjust difficulty if needed"]
 }`;
 
-      const response = await LLM.chat({
-        messages: [{ role: 'user', content: prompt }],
-        maxTokens: 500,
+      const completion = await zai.chat.completions.create({
+        messages: [
+          { role: 'assistant', content: 'You are an expert educational assessment analyst. Always respond with valid JSON.' },
+          { role: 'user', content: prompt }
+        ],
+        thinking: { type: 'disabled' }
       });
+
+      const responseContent = completion.choices[0]?.message?.content || '';
 
       let prediction;
       try {
-        const jsonMatch = response.choices[0].message.content.match(/\{[\s\S]*\}/);
+        const jsonMatch = responseContent.match(/\{[\s\S]*\}/);
         if (jsonMatch) {
           prediction = JSON.parse(jsonMatch[0]);
         } else {

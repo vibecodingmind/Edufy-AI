@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { db } from '@/lib/db';
 import { getCurrentUser } from '@/lib/auth-config';
+import ZAI from 'z-ai-web-dev-sdk';
 
 // POST - Get AI question suggestions based on topic
 export async function POST(request: NextRequest) {
@@ -33,7 +34,7 @@ Subtopics: ${topic.subtopics.map(s => s.name).join(', ')}`;
     const subject = await db.subject.findUnique({ where: { id: subjectId } });
     const classLevel = await db.classLevel.findUnique({ where: { id: classLevelId } });
 
-    const { LLM } = await import('z-ai-web-dev-sdk');
+    const zai = await ZAI.create();
 
     const prompt = `You are an expert ${subject?.name || 'education'} teacher for ${classLevel?.name || 'students'}.
 
@@ -62,14 +63,19 @@ Format as JSON array:
   }
 ]`;
 
-    const response = await LLM.chat({
-      messages: [{ role: 'user', content: prompt }],
-      maxTokens: 2000,
+    const completion = await zai.chat.completions.create({
+      messages: [
+        { role: 'assistant', content: 'You are an expert education assistant. Always respond with valid JSON arrays.' },
+        { role: 'user', content: prompt }
+      ],
+      thinking: { type: 'disabled' }
     });
+
+    const responseContent = completion.choices[0]?.message?.content || '';
 
     let suggestions = [];
     try {
-      const jsonMatch = response.choices[0].message.content.match(/\[[\s\S]*\]/);
+      const jsonMatch = responseContent.match(/\[[\s\S]*\]/);
       if (jsonMatch) {
         suggestions = JSON.parse(jsonMatch[0]);
       }

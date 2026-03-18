@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { db } from '@/lib/db';
 import { getCurrentUser } from '@/lib/auth-config';
+import ZAI from 'z-ai-web-dev-sdk';
 
 // POST - Generate AI model answers for questions
 export async function POST(request: NextRequest) {
@@ -32,8 +33,8 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'No questions to generate answers for' }, { status: 400 });
     }
 
-    // Use z-ai-web-dev-sdk for AI generation
-    const { LLM } = await import('z-ai-web-dev-sdk');
+    // Initialize ZAI
+    const zai = await ZAI.create();
     
     const generatedAnswers = [];
 
@@ -60,20 +61,25 @@ Format your response as JSON:
   "markingGuide": "how to allocate marks"
 }`;
 
-      const response = await LLM.chat({
-        messages: [{ role: 'user', content: prompt }],
-        maxTokens: 1000,
+      const completion = await zai.chat.completions.create({
+        messages: [
+          { role: 'assistant', content: 'You are an expert education assistant. Always respond with valid JSON.' },
+          { role: 'user', content: prompt }
+        ],
+        thinking: { type: 'disabled' }
       });
+
+      const responseContent = completion.choices[0]?.message?.content || '';
 
       let answerData;
       try {
         // Try to parse JSON from response
-        const jsonMatch = response.choices[0].message.content.match(/\{[\s\S]*\}/);
+        const jsonMatch = responseContent.match(/\{[\s\S]*\}/);
         if (jsonMatch) {
           answerData = JSON.parse(jsonMatch[0]);
         } else {
           answerData = {
-            modelAnswer: response.choices[0].message.content,
+            modelAnswer: responseContent,
             keyPoints: [],
             commonMistakes: [],
             markingGuide: '',
@@ -81,7 +87,7 @@ Format your response as JSON:
         }
       } catch {
         answerData = {
-          modelAnswer: response.choices[0].message.content,
+          modelAnswer: responseContent,
           keyPoints: [],
           commonMistakes: [],
           markingGuide: '',
