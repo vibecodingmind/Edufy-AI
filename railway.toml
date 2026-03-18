@@ -1,0 +1,30 @@
+# EDUC.AI Railway Configuration
+# This file configures the Railway deployment
+
+[build]
+builder = "DOCKERFILE"
+dockerfilePath = "Dockerfile"
+
+[deploy]
+numReplicas = 1
+sleepOnIdle = false
+restartPolicyType = "ON_FAILURE"
+restartPolicyMaxRetries = 10
+healthcheckPath = "/"
+healthcheckTimeout = 300
+
+# Environment variables (set these in Railway dashboard):
+# DATABASE_URL - PostgreSQL connection string (auto-added when you add PostgreSQL)
+# DIRECT_DATABASE_URL - Direct connection for migrations
+# NEXTAUTH_SECRET - Generate with: openssl rand -base64 32
+# NEXTAUTH_URL - Your Railway app URL (auto-set by Railway)
+# STRIPE_SECRET_KEY - Your Stripe secret key
+# STRIPE_WEBHOOK_SECRET - Your Stripe webhook secret
+# NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY - Your Stripe publishable key
+# GOOGLE_CLIENT_ID - Google OAuth client ID
+# GOOGLE_CLIENT_SECRET - Google OAuth client secret
+# SMTP_HOST - Email SMTP host
+# SMTP_PORT - Email SMTP port
+# SMTP_USER - Email SMTP username
+# SMTP_PASS - Email SMTP password
+# Z_AI_API_KEY - AI API key (z-ai-web-dev-sdk)
