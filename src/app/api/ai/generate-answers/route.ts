@@ -36,7 +36,13 @@ export async function POST(request: NextRequest) {
     // Initialize ZAI
     const zai = await ZAI.create();
     
-    const generatedAnswers = [];
+    const generatedAnswers: Array<{
+      questionId: string | undefined;
+      modelAnswer: string;
+      keyPoints: string[];
+      commonMistakes: string[];
+      markingGuide: string;
+    }> = [];
 
     for (const question of questions) {
       const prompt = `You are an expert ${subject || 'education'} teacher for ${classLevel || 'secondary school'} students.

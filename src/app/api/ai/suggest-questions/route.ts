@@ -73,7 +73,15 @@ Format as JSON array:
 
     const responseContent = completion.choices[0]?.message?.content || '';
 
-    let suggestions = [];
+    let suggestions: Array<{
+      questionText: string;
+      questionType: string;
+      difficulty: string;
+      marks: number;
+      options?: string[];
+      correctAnswer: string;
+      modelAnswer: string;
+    }> = [];
     try {
       const jsonMatch = responseContent.match(/\[[\s\S]*\]/);
       if (jsonMatch) {

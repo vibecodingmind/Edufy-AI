@@ -30,7 +30,14 @@ export async function POST(request: NextRequest) {
 
     const zai = await ZAI.create();
     
-    const predictions = [];
+    const predictions: Array<{
+      questionId: string | undefined;
+      difficulty: string;
+      confidence: number;
+      cognitiveLevel: string;
+      reasoning: string;
+      suggestedModifications: string[];
+    }> = [];
 
     for (const question of questions) {
       const prompt = `You are an expert educational assessment analyst for ${classLevel || 'secondary school'} ${subject || 'curriculum'}.

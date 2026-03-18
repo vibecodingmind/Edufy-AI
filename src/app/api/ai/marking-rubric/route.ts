@@ -55,7 +55,10 @@ export async function POST(request: NextRequest) {
 
     const zai = await ZAI.create();
 
-    const rubrics = [];
+    const rubrics: Array<{
+      questionId: string | undefined;
+      [key: string]: unknown;
+    }> = [];
 
     for (const question of questions) {
       const prompt = `You are an expert ${subject || 'education'} examiner creating a marking rubric.
