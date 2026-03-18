@@ -1,0 +1,826 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+// ============================================
+// USER & AUTHENTICATION
+// ============================================
+
+// User model for teachers and admins
+model User {
+  id              String          @id @default(cuid())
+  email           String          @unique
+  name            String
+  password        String?
+  role            String          @default("teacher") // admin, teacher
+  avatar          String?
+  emailVerified   DateTime?
+  schoolId        String?
+  school          School?         @relation(fields: [schoolId], references: [id])
+  preferences     String?         // JSON for user preferences
+  language        String          @default("en")
+  timezone        String          @default("UTC")
+  isActive        Boolean         @default(true)
+  lastLoginAt     DateTime?
+  createdAt       DateTime        @default(now())
+  updatedAt       DateTime        @updatedAt
+  
+  // Relations
+  accounts        Account[]
+  sessions        Session[]
+  exams           Exam[]
+  questionBank    QuestionBankItem[]
+  pastPapers      PastPaper[]
+  syllabusDocs    SyllabusDoc[]
+  textbooks       Textbook[]
+  notifications   Notification[]
+  activities      Activity[]
+  subscription    Subscription?
+  sharedLinks     SharedLink[]
+  apiKeys         ApiKey[]
+  favoriteQuestions FavoriteQuestion[]
+  questionTags    QuestionTag[]
+}
+
+// OAuth Account (Google, etc.)
+model Account {
+  id              String          @id @default(cuid())
+  userId          String
+  user            User            @relation(fields: [userId], references: [id], onDelete: Cascade)
+  provider        String          // google, facebook, apple, etc.
+  providerAccountId String
+  accessToken     String?
+  refreshToken    String?
+  expiresAt       DateTime?
+  tokenType       String?
+  scope           String?
+  idToken         String?
+  createdAt       DateTime        @default(now())
+  updatedAt       DateTime        @updatedAt
+  
+  @@unique([provider, providerAccountId])
+}
+
+// Session model for auth
+model Session {
+  id              String          @id @default(cuid())
+  userId          String
+  user            User            @relation(fields: [userId], references: [id], onDelete: Cascade)
+  expires         DateTime
+  createdAt       DateTime        @default(now())
+  updatedAt       DateTime        @updatedAt
+}
+
+// Email Verification Token
+model VerificationToken {
+  id              String          @id @default(cuid())
+  identifier      String          // email or other identifier
+  token           String          @unique
+  expires         DateTime
+  createdAt       DateTime        @default(now())
+  
+  @@unique([identifier, token])
+}
+
+// Password Reset Token
+model PasswordResetToken {
+  id              String          @id @default(cuid())
+  email           String
+  token           String          @unique
+  expires         DateTime
+  createdAt       DateTime        @default(now())
+}
+
+// ============================================
+// SCHOOL MANAGEMENT
+// ============================================
+
+// School model for branding and customization
+model School {
+  id              String        @id @default(cuid())
+  name            String
+  code            String        @unique
+  logo            String?       // Logo URL/path
+  headerImage     String?       // Header image for exam papers
+  primaryColor    String        @default("#059669") // Emerald
+  secondaryColor  String        @default("#0D9488") // Teal
+  address         String?
+  phone           String?
+  email           String?
+  website         String?
+  motto           String?
+  country         String?
+  createdAt       DateTime      @default(now())
+  updatedAt       DateTime      @updatedAt
+  users           User[]
+  examFormats     ExamFormat[]
+  teams           Team[]
+}
+
+// Team for collaboration
+model Team {
+  id              String          @id @default(cuid())
+  name            String
+  schoolId        String?
+  school          School?         @relation(fields: [schoolId], references: [id])
+  createdAt       DateTime        @default(now())
+  updatedAt       DateTime        @updatedAt
+  members         TeamMember[]
+  sharedExams     SharedExam[]
+}
+
+// Team Member
+model TeamMember {
+  id              String          @id @default(cuid())
+  teamId          String
+  team            Team            @relation(fields: [teamId], references: [id], onDelete: Cascade)
+  userId          String
+  role            String          @default("member") // owner, admin, member
+  invitedBy       String?
+  joinedAt        DateTime        @default(now())
+  
+  @@unique([teamId, userId])
+}
+
+// ============================================
+// EXAM FORMAT TEMPLATES
+// ============================================
+
+// Exam Format Template - defines paper structure
+model ExamFormat {
+  id              String          @id @default(cuid())
+  name            String          // e.g., "NECTA Standard 7 Format"
+  description     String?
+  country         String          @default("Tanzania")
+  examType        String          // national, school, mock
+  isDefault       Boolean         @default(false)
+  isPublic        Boolean         @default(false) // Public templates
+  isActive        Boolean         @default(true)
+  schoolId        String?
+  school          School?         @relation(fields: [schoolId], references: [id])
+  sections        ExamSection[]
+  exams           Exam[]
+  createdAt       DateTime        @default(now())
+  updatedAt       DateTime        @updatedAt
+}
+
+// Exam Section - defines structure of each section
+model ExamSection {
+  id              String          @id @default(cuid())
+  formatId        String
+  format          ExamFormat      @relation(fields: [formatId], references: [id], onDelete: Cascade)
+  sectionLabel     String         // A, B, C, D
+  sectionName     String          // Multiple Choice, Short Answer, etc.
+  questionType    String          // MCQ, short_answer, structured, essay
+  marksPerQuestion Int?           // Default marks per question
+  totalMarks      Int?            // Total marks for this section
+  instructions    String?
+  sortOrder       Int             @default(0)
+  createdAt       DateTime        @default(now())
+  updatedAt       DateTime        @updatedAt
+}
+
+// ============================================
+// EXAM TEMPLATES
+// ============================================
+
+// Pre-made exam templates
+model ExamTemplate {
+  id              String          @id @default(cuid())
+  name            String
+  description     String?
+  category        String          // quiz, midterm, final, national
+  subjectId       String?
+  classLevelId    String?
+  totalMarks      Int
+  duration        Int             // minutes
+  instructions    String?
+  sections        String          // JSON array of section configs
+  isPublic        Boolean         @default(true)
+  usageCount      Int             @default(0)
+  rating          Float?
+  createdBy       String?
+  createdAt       DateTime        @default(now())
+  updatedAt       DateTime        @updatedAt
+}
+
+// ============================================
+// CURRICULUM & QUESTION BANK
+// ============================================
+
+// Subject model
+model Subject {
+  id              String          @id @default(cuid())
+  name            String          @unique
+  code            String?         // Subject code like "GEO", "MATH"
+  description     String?
+  icon            String?         // Icon name or emoji
+  color           String?         // Subject color for UI
+  createdAt       DateTime        @default(now())
+  updatedAt       DateTime        @updatedAt
+  classLevels     ClassLevel[]
+  topics          Topic[]
+  questions       Question[]
+  pastPapers      PastPaper[]
+  syllabusDocs    SyllabusDoc[]
+  textbooks       Textbook[]
+}
+
+// Class Level model
+model ClassLevel {
+  id              String          @id @default(cuid())
+  name            String          @unique
+  code            String?         // e.g., "S7", "F4"
+  sortOrder       Int             @default(0)
+  createdAt       DateTime        @default(now())
+  updatedAt       DateTime        @updatedAt
+  subjects        Subject[]
+  topics          Topic[]
+  questions       Question[]
+  pastPapers      PastPaper[]
+  syllabusDocs    SyllabusDoc[]
+  textbooks       Textbook[]
+}
+
+// Topic model
+model Topic {
+  id              String          @id @default(cuid())
+  name            String
+  code            String?
+  subjectId       String
+  subject         Subject         @relation(fields: [subjectId], references: [id])
+  classLevelId    String
+  classLevel      ClassLevel      @relation(fields: [classLevelId], references: [id])
+  description     String?
+  icon            String?
+  sortOrder       Int             @default(0)
+  createdAt       DateTime        @default(now())
+  updatedAt       DateTime        @updatedAt
+  subtopics       Subtopic[]
+  questions       Question[]
+  
+  @@unique([name, subjectId, classLevelId])
+}
+
+// Subtopic model
+model Subtopic {
+  id              String          @id @default(cuid())
+  name            String
+  code            String?
+  topicId         String
+  topic           Topic           @relation(fields: [topicId], references: [id], onDelete: Cascade)
+  description     String?
+  sortOrder       Int             @default(0)
+  createdAt       DateTime        @default(now())
+  updatedAt       DateTime        @updatedAt
+  questions       Question[]
+  
+  @@unique([name, topicId])
+}
+
+// Question Bank model
+model Question {
+  id              String          @id @default(cuid())
+  questionText    String
+  questionType    String          // MCQ, short_answer, essay, structured
+  difficulty      String          // easy, medium, hard
+  predictedDifficulty Float?      // AI predicted difficulty
+  marks           Int
+  options         String?         // JSON string for MCQ options
+  correctAnswer   String
+  modelAnswer     String?         // AI-generated model answer
+  explanation     String?
+  markingScheme   String?         // JSON for marking criteria
+  imageUrl        String?         // Image for the question
+  year            Int?
+  sourceExam      String?
+  sourceType      String?         // past_paper, syllabus, textbook, manual, ai_generated
+  sourceId        String?
+  usageCount      Int             @default(0)
+  rating          Float?          // Community rating
+  aiGenerated     Boolean         @default(false)
+  isPublic        Boolean         @default(false) // Public question bank
+  subjectId       String
+  subject         Subject         @relation(fields: [subjectId], references: [id])
+  classLevelId    String
+  classLevel      ClassLevel      @relation(fields: [classLevelId], references: [id])
+  topicId         String?
+  topic           Topic?          @relation(fields: [topicId], references: [id])
+  subtopicId      String?
+  subtopic        Subtopic?       @relation(fields: [subtopicId], references: [id])
+  createdAt       DateTime        @default(now())
+  updatedAt       DateTime        @updatedAt
+  examQuestions   ExamQuestion[]
+  bankItems       QuestionBankItem[]
+  favorites       FavoriteQuestion[]
+  tags            QuestionTagAssignment[]
+}
+
+// Question Tag for organization
+model QuestionTag {
+  id              String          @id @default(cuid())
+  name            String
+  color           String          @default("#6366f1")
+  userId          String
+  user            User            @relation(fields: [userId], references: [id], onDelete: Cascade)
+  createdAt       DateTime        @default(now())
+  questions       QuestionTagAssignment[]
+  
+  @@unique([name, userId])
+}
+
+// Question Tag Assignment (many-to-many)
+model QuestionTagAssignment {
+  questionId      String
+  question        Question        @relation(fields: [questionId], references: [id], onDelete: Cascade)
+  tagId           String
+  tag             QuestionTag     @relation(fields: [tagId], references: [id], onDelete: Cascade)
+  assignedAt      DateTime        @default(now())
+  
+  @@id([questionId, tagId])
+}
+
+// User's Question Bank (personal collection)
+model QuestionBankItem {
+  id              String          @id @default(cuid())
+  userId          String
+  user            User            @relation(fields: [userId], references: [id], onDelete: Cascade)
+  questionId      String
+  question        Question        @relation(fields: [questionId], references: [id])
+  folder          String?         // Optional folder organization
+  notes           String?         // User notes
+  addedAt         DateTime        @default(now())
+  
+  @@unique([userId, questionId])
+}
+
+// Favorite Questions
+model FavoriteQuestion {
+  id              String          @id @default(cuid())
+  userId          String
+  user            User            @relation(fields: [userId], references: [id], onDelete: Cascade)
+  questionId      String
+  question        Question        @relation(fields: [questionId], references: [id])
+  createdAt       DateTime        @default(now())
+  
+  @@unique([userId, questionId])
+}
+
+// ============================================
+// EXAM MANAGEMENT
+// ============================================
+
+// Exam model
+model Exam {
+  id              String          @id @default(cuid())
+  title           String
+  code            String?         // Exam code
+  examType        String          // midterm, final, quiz, assignment, national
+  totalMarks      Int
+  duration        Int             // in minutes
+  instructions    String?
+  status          String          @default("draft") // draft, generated, published, archived
+  version         Int             @default(1)
+  isTemplate      Boolean         @default(false)
+  isPublic        Boolean         @default(false)
+  userId          String
+  user            User            @relation(fields: [userId], references: [id])
+  formatId        String?
+  format          ExamFormat?     @relation(fields: [formatId], references: [id])
+  subjectId       String?
+  classLevelId    String?
+  createdAt       DateTime        @default(now())
+  updatedAt       DateTime        @updatedAt
+  examQuestions   ExamQuestion[]
+  versions        ExamVersion[]
+  sharedLinks     SharedLink[]
+  sharedExams     SharedExam[]
+}
+
+// Exam Version History
+model ExamVersion {
+  id              String          @id @default(cuid())
+  examId          String
+  exam            Exam            @relation(fields: [examId], references: [id], onDelete: Cascade)
+  version         Int
+  title           String
+  examType        String
+  totalMarks      Int
+  duration        Int
+  instructions    String?
+  snapshot        String          // JSON snapshot of exam questions
+  createdBy       String
+  createdAt       DateTime        @default(now())
+  
+  @@unique([examId, version])
+}
+
+// Exam Questions junction table
+model ExamQuestion {
+  id              String          @id @default(cuid())
+  examId          String
+  exam            Exam            @relation(fields: [examId], references: [id], onDelete: Cascade)
+  questionId      String
+  question        Question        @relation(fields: [questionId], references: [id])
+  section         String          // A, B, C, D
+  questionNum     Int
+  marks           Int
+  createdAt       DateTime        @default(now())
+  
+  @@unique([examId, questionId])
+}
+
+// Shared Link for exams
+model SharedLink {
+  id              String          @id @default(cuid())
+  examId          String
+  exam            Exam            @relation(fields: [examId], references: [id], onDelete: Cascade)
+  userId          String
+  user            User            @relation(fields: [userId], references: [id], onDelete: Cascade)
+  token           String          @unique
+  expiresAt       DateTime?
+  maxViews        Int?
+  viewCount       Int             @default(0)
+  allowDownload   Boolean         @default(true)
+  isActive        Boolean         @default(true)
+  createdAt       DateTime        @default(now())
+}
+
+// Shared Exam with team
+model SharedExam {
+  id              String          @id @default(cuid())
+  examId          String
+  exam            Exam            @relation(fields: [examId], references: [id], onDelete: Cascade)
+  teamId          String
+  team            Team            @relation(fields: [teamId], references: [id], onDelete: Cascade)
+  sharedBy        String
+  canEdit         Boolean         @default(false)
+  sharedAt        DateTime        @default(now())
+  
+  @@unique([examId, teamId])
+}
+
+// ============================================
+// PAST PAPERS & CURRICULUM DOCUMENTS
+// ============================================
+
+// Past Paper model
+model PastPaper {
+  id              String          @id @default(cuid())
+  title           String
+  description     String?
+  year            Int
+  examType        String          // national, mock, regional, school
+  term            String?
+  filePath        String
+  fileName        String
+  fileType        String
+  fileSize        Int
+  extractionStatus String          @default("pending")
+  extractedCount  Int             @default(0)
+  subjectId       String
+  subject         Subject         @relation(fields: [subjectId], references: [id])
+  classLevelId    String
+  classLevel      ClassLevel      @relation(fields: [classLevelId], references: [id])
+  userId          String
+  user            User            @relation(fields: [userId], references: [id])
+  createdAt       DateTime        @default(now())
+  updatedAt       DateTime        @updatedAt
+}
+
+// Syllabus Document model
+model SyllabusDoc {
+  id              String          @id @default(cuid())
+  title           String
+  description     String?
+  year            Int?
+  filePath        String
+  fileName        String
+  fileType        String
+  fileSize        Int
+  extractionStatus String          @default("pending")
+  subjectId       String
+  subject         Subject         @relation(fields: [subjectId], references: [id])
+  classLevelId    String
+  classLevel      ClassLevel      @relation(fields: [classLevelId], references: [id])
+  userId          String
+  user            User            @relation(fields: [userId], references: [id])
+  createdAt       DateTime        @default(now())
+  updatedAt       DateTime        @updatedAt
+  syllabusTopics  SyllabusTopic[]
+}
+
+// Syllabus Topic
+model SyllabusTopic {
+  id              String          @id @default(cuid())
+  name            String
+  description     String?
+  weekNumber      Int?
+  objectives      String?         // JSON
+  syllabusDocId   String
+  syllabusDoc     SyllabusDoc     @relation(fields: [syllabusDocId], references: [id], onDelete: Cascade)
+  createdAt       DateTime        @default(now())
+  updatedAt       DateTime        @updatedAt
+}
+
+// Textbook model
+model Textbook {
+  id              String          @id @default(cuid())
+  title           String
+  author          String?
+  publisher       String?
+  edition         String?
+  year            Int?
+  description     String?
+  coverImage      String?
+  filePath        String
+  fileName        String
+  fileType        String
+  fileSize        Int
+  extractionStatus String          @default("pending")
+  subjectId       String
+  subject         Subject         @relation(fields: [subjectId], references: [id])
+  classLevelId    String
+  classLevel      ClassLevel      @relation(fields: [classLevelId], references: [id])
+  userId          String
+  user            User            @relation(fields: [userId], references: [id])
+  createdAt       DateTime        @default(now())
+  updatedAt       DateTime        @updatedAt
+  chapters        TextbookChapter[]
+}
+
+// Textbook Chapter
+model TextbookChapter {
+  id              String          @id @default(cuid())
+  chapterNum      Int
+  title           String
+  content         String?
+  topics          String?         // JSON array
+  textbookId      String
+  textbook        Textbook        @relation(fields: [textbookId], references: [id], onDelete: Cascade)
+  createdAt       DateTime        @default(now())
+  updatedAt       DateTime        @updatedAt
+}
+
+// ============================================
+// SUBSCRIPTION & BILLING
+// ============================================
+
+// Subscription Plan model - defines available plans
+model SubscriptionPlan {
+  id                      String          @id @default(cuid())
+  name                    String          // Free, Pro, School, District
+  slug                    String          @unique // free, pro, school, district
+  description             String?
+  priceMonthly            Float           @default(0)
+  priceYearly             Float           @default(0)
+  currency                String          @default("USD")
+  stripePriceIdMonthly    String?
+  stripePriceIdYearly     String?
+  
+  // Feature limits
+  maxExamsPerMonth        Int             @default(5)
+  maxQuestionsPerExam     Int             @default(50)
+  maxPastPapers           Int             @default(5)
+  maxTextbooks            Int             @default(3)
+  maxSyllabusDocs         Int             @default(3)
+  
+  // Feature flags
+  aiGeneration            Boolean         @default(true)
+  pdfExport               Boolean         @default(true)
+  markingScheme           Boolean         @default(true)
+  customFormats           Boolean         @default(false)
+  schoolBranding          Boolean         @default(false)
+  multiUser               Boolean         @default(false)
+  analytics               Boolean         @default(false)
+  prioritySupport         Boolean         @default(false)
+  apiAccess               Boolean         @default(false)
+  whiteLabel              Boolean         @default(false)
+  questionBank            Boolean         @default(true)
+  templates               Boolean         @default(true)
+  collaboration           Boolean         @default(false)
+  
+  // Storage limits (in MB)
+  storageLimit            Int             @default(100)
+  
+  isActive                Boolean         @default(true)
+  sortOrder               Int             @default(0)
+  createdAt               DateTime        @default(now())
+  updatedAt               DateTime        @updatedAt
+  subscriptions           Subscription[]
+}
+
+// Subscription model - user subscriptions
+model Subscription {
+  id                      String          @id @default(cuid())
+  userId                  String          @unique
+  user                    User            @relation(fields: [userId], references: [id], onDelete: Cascade)
+  planId                  String
+  plan                    SubscriptionPlan @relation(fields: [planId], references: [id])
+  
+  status                  String          @default("active") // active, cancelled, expired, pending, trialing
+  billingCycle            String          @default("monthly") // monthly, yearly
+  
+  startDate               DateTime        @default(now())
+  endDate                 DateTime?
+  cancelledAt             DateTime?
+  cancelAtPeriodEnd       Boolean         @default(false)
+  
+  // Usage tracking
+  examsThisMonth          Int             @default(0)
+  lastUsageReset          DateTime        @default(now())
+  
+  stripeCustomerId        String?
+  stripeSubscriptionId    String?
+  
+  createdAt               DateTime        @default(now())
+  updatedAt               DateTime        @updatedAt
+  invoices                Invoice[]
+}
+
+// Invoice model - billing history
+model Invoice {
+  id                      String          @id @default(cuid())
+  subscriptionId          String
+  subscription            Subscription    @relation(fields: [subscriptionId], references: [id], onDelete: Cascade)
+  
+  amount                  Float
+  currency                String          @default("USD")
+  status                  String          @default("pending") // pending, paid, failed, refunded
+  
+  invoiceDate             DateTime        @default(now())
+  dueDate                 DateTime?
+  paidDate                DateTime?
+  
+  stripeInvoiceId         String?
+  stripePaymentIntentId   String?
+  
+  pdfUrl                  String?
+  
+  createdAt               DateTime        @default(now())
+  updatedAt               DateTime        @updatedAt
+}
+
+// ============================================
+// API ACCESS
+// ============================================
+
+// API Key for external access
+model ApiKey {
+  id              String          @id @default(cuid())
+  userId          String
+  user            User            @relation(fields: [userId], references: [id], onDelete: Cascade)
+  name            String
+  key             String          @unique
+  prefix          String          // First 8 chars for display
+  permissions     String?         // JSON array of permissions
+  lastUsedAt      DateTime?
+  expiresAt       DateTime?
+  isActive        Boolean         @default(true)
+  createdAt       DateTime        @default(now())
+  updatedAt       DateTime        @updatedAt
+}
+
+// API Usage Log
+model ApiUsageLog {
+  id              String          @id @default(cuid())
+  apiKeyId        String?
+  endpoint        String
+  method          String
+  statusCode      Int
+  responseTime    Int             // ms
+  ipAddress       String?
+  userAgent       String?
+  createdAt       DateTime        @default(now())
+}
+
+// ============================================
+// NOTIFICATIONS & ACTIVITY
+// ============================================
+
+// Notification model
+model Notification {
+  id              String          @id @default(cuid())
+  userId          String
+  user            User            @relation(fields: [userId], references: [id], onDelete: Cascade)
+  type            String          // info, success, warning, error, email_verification, subscription
+  title           String
+  message         String
+  link            String?
+  read            Boolean         @default(false)
+  createdAt       DateTime        @default(now())
+}
+
+// Activity model
+model Activity {
+  id              String          @id @default(cuid())
+  userId          String
+  user            User            @relation(fields: [userId], references: [id], onDelete: Cascade)
+  type            String          // exam_created, exam_published, resource_uploaded, etc.
+  title           String
+  description     String?
+  metadata        String?         // JSON for additional data
+  createdAt       DateTime        @default(now())
+}
+
+// ============================================
+// ANALYTICS & REPORTING
+// ============================================
+
+// Analytics model - platform usage stats
+model Analytics {
+  id              String          @id @default(cuid())
+  date            DateTime        @default(now())
+  
+  // User metrics
+  totalUsers      Int             @default(0)
+  newUsers        Int             @default(0)
+  activeUsers     Int             @default(0)
+  
+  // Exam metrics
+  examsGenerated  Int             @default(0)
+  examsExported   Int             @default(0)
+  examsShared     Int             @default(0)
+  questionsCreated Int            @default(0)
+  
+  // Resource metrics
+  pastPapersUploaded Int          @default(0)
+  textbooksUploaded Int           @default(0)
+  syllabusUploaded Int            @default(0)
+  
+  // Subscription metrics
+  newSubscriptions Int            @default(0)
+  cancelledSubscriptions Int      @default(0)
+  revenue         Float           @default(0)
+  
+  // AI metrics
+  aiGenerations   Int             @default(0)
+  aiTokensUsed    Int             @default(0)
+  
+  createdAt       DateTime        @default(now())
+  
+  @@unique([date])
+}
+
+// Topic Coverage - track curriculum coverage
+model TopicCoverage {
+  id              String          @id @default(cuid())
+  topicId         String
+  userId          String
+  questionsGenerated Int          @default(0)
+  lastGenerated   DateTime?
+  coverage        Float           @default(0) // percentage
+  createdAt       DateTime        @default(now())
+  updatedAt       DateTime        @updatedAt
+  
+  @@unique([topicId, userId])
+}
+
+// ============================================
+// SETTINGS & CONFIGURATION
+// ============================================
+
+// Platform Settings
+model PlatformSetting {
+  id              String          @id @default(cuid())
+  key             String          @unique
+  value           String
+  description     String?
+  category        String          @default("general") // general, ai, billing, email
+  isPublic        Boolean         @default(false)
+  createdAt       DateTime        @default(now())
+  updatedAt       DateTime        @updatedAt
+}
+
+// Email Template
+model EmailTemplate {
+  id              String          @id @default(cuid())
+  name            String          @unique
+  subject         String
+  htmlContent     String
+  textContent     String?
+  variables       String?         // JSON array of variable names
+  isActive        Boolean         @default(true)
+  createdAt       DateTime        @default(now())
+  updatedAt       DateTime        @updatedAt
+}
+
+// Email Log
+model EmailLog {
+  id              String          @id @default(cuid())
+  to              String
+  subject         String
+  template        String?
+  status          String          @default("pending") // pending, sent, failed
+  error           String?
+  sentAt          DateTime?
+  createdAt       DateTime        @default(now())
+}
