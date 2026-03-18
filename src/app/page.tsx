@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -129,7 +129,7 @@ interface Subscription {
   plan: SubscriptionPlan;
 }
 
-type View = 'landing' | 'auth' | 'dashboard' | 'generator' | 'editor' | 'resources' | 'pricing' | 'admin' | 'profile' | 'questions' | 'templates' | 'ai-tools' | 'analytics';
+type View = 'landing' | 'auth' | 'dashboard' | 'generator' | 'editor' | 'resources' | 'pricing' | 'admin' | 'profile' | 'questions' | 'templates' | 'ai-tools' | 'analytics' | 'preview';
 
 // Chart data
 const examTrendsData = [
@@ -533,6 +533,29 @@ export default function HomePage() {
     setUploadClassLevel('');
   };
 
+  const handleDeleteResource = async (type: 'pastPaper' | 'syllabus' | 'textbook', id: string) => {
+    if (!confirm('Are you sure you want to delete this resource?')) return;
+    try {
+      const endpoint = type === 'pastPaper' ? '/api/past-papers' : type === 'syllabus' ? '/api/syllabus' : '/api/textbooks';
+      const res = await fetch(`${endpoint}?id=${id}`, { method: 'DELETE' });
+      const data = await res.json();
+      if (!res.ok) {
+        toast.error(data.error || 'Failed to delete');
+        return;
+      }
+      if (type === 'pastPaper') {
+        setPastPapers(pastPapers.filter(p => p.id !== id));
+      } else if (type === 'syllabus') {
+        setSyllabusDocs(syllabusDocs.filter(s => s.id !== id));
+      } else {
+        setTextbooks(textbooks.filter(t => t.id !== id));
+      }
+      toast.success('Resource deleted');
+    } catch (error) {
+      toast.error('Failed to delete resource');
+    }
+  };
+
   const openUploadDialog = (type: 'pastPaper' | 'syllabus' | 'textbook') => {
     setUploadType(type);
     resetUploadForm();
@@ -556,8 +579,8 @@ export default function HomePage() {
     return <Badge className={`${v.bg} ${v.text}`}>{status.charAt(0).toUpperCase() + status.slice(1)}</Badge>;
   };
 
-  const getPlanIcon = (slug: string) => {
-    const icons: Record<string, JSX.Element> = {
+  const getPlanIcon = (slug: string): React.ReactNode => {
+    const icons: Record<string, React.ReactNode> = {
       free: <Zap className="h-5 w-5" />,
       pro: <Sparkles className="h-5 w-5" />,
       school: <Building2 className="h-5 w-5" />,

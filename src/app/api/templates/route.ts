@@ -18,9 +18,6 @@ export async function GET(request: NextRequest) {
 
     const templates = await db.examTemplate.findMany({
       where,
-      include: {
-        subject: true,
-      },
       orderBy: [
         { usageCount: 'desc' },
         { createdAt: 'desc' },

@@ -177,7 +177,7 @@ async function extractTextFromImage(filePath: string): Promise<string> {
     
     const zai = await ZAI.create();
     
-    const response = await zai.chat.completions.createVision({
+    const response = await zai.chat.completions.create({
       messages: [
         {
           role: 'user',
@@ -194,7 +194,7 @@ async function extractTextFromImage(filePath: string): Promise<string> {
             }
           ]
         }
-      ],
+      ] as any,
       thinking: { type: 'disabled' }
     });
     

@@ -1,6 +1,6 @@
 import { createContext, useContext, useState, ReactNode } from 'react';
-import enMessages from '../messages/en.json';
-import swMessages from '../messages/sw.json';
+import enMessages from '../../messages/en.json';
+import swMessages from '../../messages/sw.json';
 
 type Locale = 'en' | 'sw' | 'fr';
 

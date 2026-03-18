@@ -34,8 +34,9 @@ export async function POST(request: NextRequest) {
     });
     
     // Create sections
+    const createdSections: Awaited<ReturnType<typeof db.examSection.create>>[] = [];
     for (const section of sections) {
-      await db.examSection.create({
+      const createdSection = await db.examSection.create({
         data: {
           formatId: format.id,
           sectionLabel: section.sectionLabel,
@@ -47,9 +48,10 @@ export async function POST(request: NextRequest) {
           sortOrder: section.sortOrder,
         },
       });
+      createdSections.push(createdSection);
     }
     
-    return NextResponse.json({ format, sections: format.sections });
+    return NextResponse.json({ format, sections: createdSections });
   } catch (error) {
     console.error('Error creating exam format:', error);
     return NextResponse.json({ error: 'Failed to create exam format' }, { status: 500 });
