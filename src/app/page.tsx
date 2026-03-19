@@ -188,10 +188,12 @@ export default function HomePage() {
   
   // Auth state
   const [authTab, setAuthTab] = useState<'login' | 'register'>('login');
+  const [authStep, setAuthStep] = useState<'email' | 'password' | 'register'>('email');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [name, setName] = useState('');
   const [authLoading, setAuthLoading] = useState(false);
+  const [rememberMe, setRememberMe] = useState(true);
   
   // Curriculum data
   const [subjects, setSubjects] = useState<Subject[]>([]);
@@ -1386,153 +1388,292 @@ export default function HomePage() {
     );
   }
 
-  // Auth View
+  // Auth View - Gmail Style
   if (view === 'auth') {
     return (
-      <div className="min-h-screen flex bg-background">
-        {/* Left side - Auth form */}
-        <div className="flex-1 flex items-center justify-center p-8">
+      <div className="min-h-screen flex flex-col bg-white dark:bg-slate-950">
+        {/* Main Content */}
+        <div className="flex-1 flex items-center justify-center px-4 py-8">
           <motion.div 
             className="w-full max-w-md"
-            initial={{ opacity: 0, x: -20 }}
-            animate={{ opacity: 1, x: 0 }}
-            transition={{ duration: 0.5 }}
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.4 }}
           >
-            <Button 
-              variant="ghost" 
-              onClick={() => setView('landing')} 
-              className="mb-8 text-muted-foreground hover:text-foreground"
-            >
-              <ChevronLeft className="h-4 w-4 mr-2" />
-              Back to home
-            </Button>
-
-            <div className="flex items-center gap-3 mb-8">
-              <div className="p-2 bg-gradient-to-br from-grass-500 to-teal-600 rounded-xl shadow-lg shadow-grass-500/25">
-                <GraduationCap className="h-6 w-6 text-white" />
-              </div>
-              <span className="text-xl font-bold gradient-text">EDUC.AI</span>
+            {/* Logo */}
+            <div className="flex justify-center mb-6">
+              <motion.div 
+                className="flex items-center gap-2 cursor-pointer"
+                whileHover={{ scale: 1.02 }}
+                onClick={() => setView('landing')}
+              >
+                <div className="p-2.5 bg-gradient-to-br from-grass-500 to-teal-600 rounded-xl shadow-lg">
+                  <GraduationCap className="h-7 w-7 text-white" />
+                </div>
+                <span className="text-2xl font-bold gradient-text">EDUC.AI</span>
+              </motion.div>
             </div>
 
-            <Tabs value={authTab} onValueChange={(v) => setAuthTab(v as 'login' | 'register')}>
-              <TabsList className="grid w-full grid-cols-2 mb-8">
-                <TabsTrigger value="login">Sign In</TabsTrigger>
-                <TabsTrigger value="register">Create Account</TabsTrigger>
-              </TabsList>
+            {/* Card */}
+            <div className="bg-white dark:bg-slate-900 rounded-2xl shadow-xl border border-slate-200 dark:border-slate-800 p-10">
+              <AnimatePresence mode="wait">
+                {/* Email Step */}
+                {authStep === 'email' && authTab === 'login' && (
+                  <motion.div
+                    key="email-step"
+                    initial={{ opacity: 0, x: -20 }}
+                    animate={{ opacity: 1, x: 0 }}
+                    exit={{ opacity: 0, x: 20 }}
+                    transition={{ duration: 0.3 }}
+                  >
+                    <div className="text-center mb-8">
+                      <h1 className="text-2xl font-normal text-slate-800 dark:text-white mb-2">Sign in</h1>
+                      <p className="text-slate-600 dark:text-slate-400">Use your EDUC.AI Account</p>
+                    </div>
 
-              <TabsContent value="login">
-                <Card className="card-grassy">
-                  <CardHeader>
-                    <CardTitle className="font-display">Welcome back</CardTitle>
-                    <CardDescription>Sign in to your account to continue</CardDescription>
-                  </CardHeader>
-                  <form onSubmit={handleAuth}>
-                    <CardContent className="space-y-4">
-                      <div className="space-y-2">
-                        <Label htmlFor="email">Email</Label>
-                        <Input 
-                          id="email" 
-                          type="email" 
-                          placeholder="teacher@school.com"
-                          value={email}
-                          onChange={(e) => setEmail(e.target.value)}
-                          className="input-grassy"
-                        />
-                      </div>
-                      <div className="space-y-2">
-                        <Label htmlFor="password">Password</Label>
-                        <Input 
-                          id="password" 
-                          type="password"
-                          value={password}
-                          onChange={(e) => setPassword(e.target.value)}
-                          className="input-grassy"
-                        />
-                      </div>
-                    </CardContent>
-                    <CardFooter>
-                      <Button type="submit" className="w-full btn-grassy text-white" disabled={authLoading}>
-                        {authLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : 'Sign In'}
-                      </Button>
-                    </CardFooter>
-                  </form>
-                </Card>
-              </TabsContent>
+                    <form onSubmit={(e) => {
+                      e.preventDefault();
+                      if (email) setAuthStep('password');
+                    }}>
+                      <div className="space-y-6">
+                        <div>
+                          <Input
+                            type="email"
+                            placeholder="Email or phone"
+                            value={email}
+                            onChange={(e) => setEmail(e.target.value)}
+                            className="h-12 px-4 text-base border-slate-300 dark:border-slate-700 rounded-lg focus:ring-2 focus:ring-grass-500 focus:border-transparent"
+                          />
+                        </div>
 
-              <TabsContent value="register">
-                <Card className="card-grassy">
-                  <CardHeader>
-                    <CardTitle className="font-display">Create your account</CardTitle>
-                    <CardDescription>Start your free trial today</CardDescription>
-                  </CardHeader>
-                  <form onSubmit={handleAuth}>
-                    <CardContent className="space-y-4">
-                      <div className="space-y-2">
-                        <Label htmlFor="name">Full Name</Label>
-                        <Input 
-                          id="name" 
-                          placeholder="John Doe"
-                          value={name}
-                          onChange={(e) => setName(e.target.value)}
-                          className="input-grassy"
-                        />
+                        <div className="text-sm">
+                          <button
+                            type="button"
+                            className="text-grass-600 dark:text-grass-400 font-medium hover:underline"
+                            onClick={() => setAuthTab('register')}
+                          >
+                            Create account
+                          </button>
+                        </div>
+
+                        <div className="flex justify-end pt-4">
+                          <Button
+                            type="submit"
+                            className="bg-grass-600 hover:bg-grass-700 text-white px-6 h-10 rounded-full font-medium"
+                            disabled={!email || authLoading}
+                          >
+                            {authLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : 'Next'}
+                          </Button>
+                        </div>
                       </div>
-                      <div className="space-y-2">
-                        <Label htmlFor="reg-email">Email</Label>
-                        <Input 
-                          id="reg-email" 
-                          type="email" 
-                          placeholder="teacher@school.com"
-                          value={email}
-                          onChange={(e) => setEmail(e.target.value)}
-                          className="input-grassy"
-                        />
+                    </form>
+                  </motion.div>
+                )}
+
+                {/* Password Step */}
+                {authStep === 'password' && authTab === 'login' && (
+                  <motion.div
+                    key="password-step"
+                    initial={{ opacity: 0, x: 20 }}
+                    animate={{ opacity: 1, x: 0 }}
+                    exit={{ opacity: 0, x: -20 }}
+                    transition={{ duration: 0.3 }}
+                  >
+                    <div className="text-center mb-8">
+                      <h1 className="text-2xl font-normal text-slate-800 dark:text-white mb-2">Welcome</h1>
+                      <div className="flex items-center justify-center gap-3 mt-4 p-3 bg-slate-50 dark:bg-slate-800 rounded-full">
+                        <Avatar className="h-8 w-8">
+                          <AvatarFallback className="bg-gradient-to-br from-grass-500 to-teal-500 text-white text-sm">
+                            {email.charAt(0).toUpperCase()}
+                          </AvatarFallback>
+                        </Avatar>
+                        <span className="text-slate-700 dark:text-slate-300 text-sm">{email}</span>
+                        <button
+                          type="button"
+                          onClick={() => setAuthStep('email')}
+                          className="text-grass-600 dark:text-grass-400 text-xs font-medium hover:underline"
+                        >
+                          Change
+                        </button>
                       </div>
-                      <div className="space-y-2">
-                        <Label htmlFor="reg-password">Password</Label>
-                        <Input 
-                          id="reg-password" 
-                          type="password"
-                          value={password}
-                          onChange={(e) => setPassword(e.target.value)}
-                          className="input-grassy"
-                        />
+                    </div>
+
+                    <form onSubmit={handleAuth}>
+                      <div className="space-y-6">
+                        <div>
+                          <Input
+                            type="password"
+                            placeholder="Enter your password"
+                            value={password}
+                            onChange={(e) => setPassword(e.target.value)}
+                            autoFocus
+                            className="h-12 px-4 text-base border-slate-300 dark:border-slate-700 rounded-lg focus:ring-2 focus:ring-grass-500 focus:border-transparent"
+                          />
+                        </div>
+
+                        <div className="flex items-center justify-between">
+                          <label className="flex items-center gap-2 cursor-pointer">
+                            <Checkbox
+                              checked={rememberMe}
+                              onCheckedChange={(checked) => setRememberMe(checked as boolean)}
+                              className="border-slate-400"
+                            />
+                            <span className="text-sm text-slate-600 dark:text-slate-400">Show password</span>
+                          </label>
+                        </div>
+
+                        <div className="flex items-center justify-between pt-4">
+                          <button
+                            type="button"
+                            className="text-grass-600 dark:text-grass-400 font-medium text-sm hover:underline"
+                          >
+                            Forgot password?
+                          </button>
+                          <Button
+                            type="submit"
+                            className="bg-grass-600 hover:bg-grass-700 text-white px-6 h-10 rounded-full font-medium"
+                            disabled={!password || authLoading}
+                          >
+                            {authLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : 'Sign in'}
+                          </Button>
+                        </div>
                       </div>
-                    </CardContent>
-                    <CardFooter>
-                      <Button type="submit" className="w-full btn-grassy text-white" disabled={authLoading}>
-                        {authLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : (
-                          <>
-                            <Sprout className="h-4 w-4 mr-2" />
-                            Create Account
-                          </>
-                        )}
-                      </Button>
-                    </CardFooter>
-                  </form>
-                </Card>
-              </TabsContent>
-            </Tabs>
+                    </form>
+                  </motion.div>
+                )}
+
+                {/* Register Step */}
+                {authTab === 'register' && (
+                  <motion.div
+                    key="register-step"
+                    initial={{ opacity: 0, scale: 0.98 }}
+                    animate={{ opacity: 1, scale: 1 }}
+                    transition={{ duration: 0.3 }}
+                  >
+                    <div className="text-center mb-8">
+                      <h1 className="text-2xl font-normal text-slate-800 dark:text-white mb-2">Create account</h1>
+                      <p className="text-slate-600 dark:text-slate-400">Start your free trial today</p>
+                    </div>
+
+                    <form onSubmit={handleAuth}>
+                      <div className="space-y-5">
+                        <div>
+                          <Input
+                            type="text"
+                            placeholder="Full name"
+                            value={name}
+                            onChange={(e) => setName(e.target.value)}
+                            className="h-12 px-4 text-base border-slate-300 dark:border-slate-700 rounded-lg focus:ring-2 focus:ring-grass-500 focus:border-transparent"
+                          />
+                        </div>
+
+                        <div>
+                          <Input
+                            type="email"
+                            placeholder="Your email address"
+                            value={email}
+                            onChange={(e) => setEmail(e.target.value)}
+                            className="h-12 px-4 text-base border-slate-300 dark:border-slate-700 rounded-lg focus:ring-2 focus:ring-grass-500 focus:border-transparent"
+                          />
+                        </div>
+
+                        <div>
+                          <Input
+                            type="password"
+                            placeholder="Password"
+                            value={password}
+                            onChange={(e) => setPassword(e.target.value)}
+                            className="h-12 px-4 text-base border-slate-300 dark:border-slate-700 rounded-lg focus:ring-2 focus:ring-grass-500 focus:border-transparent"
+                          />
+                        </div>
+
+                        <div className="flex items-start gap-2">
+                          <Checkbox
+                            checked={rememberMe}
+                            onCheckedChange={(checked) => setRememberMe(checked as boolean)}
+                            className="border-slate-400 mt-1"
+                          />
+                          <span className="text-xs text-slate-500 dark:text-slate-400">
+                            I agree to the{' '}
+                            <a href="#" className="text-grass-600 dark:text-grass-400 hover:underline">Terms of Service</a>
+                            {' '}and{' '}
+                            <a href="#" className="text-grass-600 dark:text-grass-400 hover:underline">Privacy Policy</a>
+                          </span>
+                        </div>
+
+                        <div className="flex items-center justify-between pt-4">
+                          <button
+                            type="button"
+                            className="text-grass-600 dark:text-grass-400 font-medium text-sm hover:underline"
+                            onClick={() => {
+                              setAuthTab('login');
+                              setAuthStep('email');
+                            }}
+                          >
+                            Sign in instead
+                          </button>
+                          <Button
+                            type="submit"
+                            className="bg-grass-600 hover:bg-grass-700 text-white px-6 h-10 rounded-full font-medium"
+                            disabled={!email || !password || !name || authLoading}
+                          >
+                            {authLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : 'Create account'}
+                          </Button>
+                        </div>
+                      </div>
+                    </form>
+                  </motion.div>
+                )}
+              </AnimatePresence>
+            </div>
+
+            {/* Divider with "or" */}
+            <div className="flex items-center my-6">
+              <div className="flex-1 border-t border-slate-200 dark:border-slate-800"></div>
+              <span className="px-4 text-sm text-slate-500 dark:text-slate-400">or</span>
+              <div className="flex-1 border-t border-slate-200 dark:border-slate-800"></div>
+            </div>
+
+            {/* Social Login */}
+            <div className="space-y-3">
+              <Button
+                type="button"
+                variant="outline"
+                className="w-full h-12 border-slate-300 dark:border-slate-700 rounded-lg font-normal hover:bg-slate-50 dark:hover:bg-slate-800"
+                onClick={() => toast.info('Google Sign In coming soon!')}
+              >
+                <svg className="h-5 w-5 mr-3" viewBox="0 0 24 24">
+                  <path
+                    fill="#4285F4"
+                    d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"
+                  />
+                  <path
+                    fill="#34A853"
+                    d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"
+                  />
+                  <path
+                    fill="#FBBC05"
+                    d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z"
+                  />
+                  <path
+                    fill="#EA4335"
+                    d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"
+                  />
+                </svg>
+                Continue with Google
+              </Button>
+            </div>
+
+            {/* Footer Links */}
+            <div className="mt-8 flex items-center justify-center gap-6 text-xs text-slate-500 dark:text-slate-400">
+              <span>English (United States)</span>
+              <div className="flex gap-4">
+                <a href="#" className="hover:text-slate-700 dark:hover:text-slate-300 hover:underline">Help</a>
+                <a href="#" className="hover:text-slate-700 dark:hover:text-slate-300 hover:underline">Privacy</a>
+                <a href="#" className="hover:text-slate-700 dark:hover:text-slate-300 hover:underline">Terms</a>
+              </div>
+            </div>
           </motion.div>
-        </div>
-
-        {/* Right side - Decorative */}
-        <div className="hidden lg:block lg:w-1/2 bg-gradient-to-br from-grass-500 via-teal-500 to-mint-500 relative overflow-hidden">
-          <div className="absolute inset-0 pattern-leaves opacity-20" />
-          <div className="absolute inset-0 flex items-center justify-center p-12">
-            <motion.div 
-              className="text-white text-center"
-              initial={{ opacity: 0, scale: 0.9 }}
-              animate={{ opacity: 1, scale: 1 }}
-              transition={{ delay: 0.3, duration: 0.5 }}
-            >
-              <TreeDeciduous className="h-24 w-24 mx-auto mb-6 opacity-80" />
-              <h2 className="text-3xl font-bold font-display mb-4">Transform Your Teaching</h2>
-              <p className="text-white/80 text-lg">
-                Join thousands of educators creating better exams in less time.
-              </p>
-            </motion.div>
-          </div>
         </div>
       </div>
     );
