@@ -1,5 +1,5 @@
 import type { Metadata, Viewport } from "next";
-import { Inter, Playfair_Display } from "next/font/google";
+import { Inter, Plus_Jakarta_Sans } from "next/font/google";
 import "./globals.css";
 import { Toaster } from "@/components/ui/sonner";
 import { ThemeProvider } from "@/components/theme-provider";
@@ -9,8 +9,8 @@ const inter = Inter({
   subsets: ["latin"],
 });
 
-const playfair = Playfair_Display({
-  variable: "--font-playfair",
+const plusJakarta = Plus_Jakarta_Sans({
+  variable: "--font-display",
   subsets: ["latin"],
 });
 
@@ -20,8 +20,8 @@ export const viewport: Viewport = {
   maximumScale: 5,
   userScalable: true,
   themeColor: [
-    { media: '(prefers-color-scheme: light)', color: '#ffffff' },
-    { media: '(prefers-color-scheme: dark)', color: '#0f172a' },
+    { media: '(prefers-color-scheme: light)', color: '#f8faf5' },
+    { media: '(prefers-color-scheme: dark)', color: '#1a2e1a' },
   ],
 };
 
@@ -67,7 +67,7 @@ export default function RootLayout({
   return (
     <html lang="en" suppressHydrationWarning>
       <body
-        className={`${inter.variable} ${playfair.variable} font-sans antialiased`}
+        className={`${inter.variable} ${plusJakarta.variable} font-sans antialiased`}
       >
         <ThemeProvider
           attribute="class"
